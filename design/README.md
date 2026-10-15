@@ -1,3 +1,5 @@
+> Current version: [Dashboard v2 — desktop, tablet, and mobile](dashboard-v2.md). The inventory below is the earlier referral-flow prototype.
+
 # Tafu frontend prototype
 
 [Figma Design file](https://www.figma.com/design/9T8dgasyFx6L9KKVfNMncD?node-id=2-222)

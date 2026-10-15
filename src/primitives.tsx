@@ -56,3 +56,11 @@ export function SelectField({
     </label>
   );
 }
+
+export function Avatar({ initials }: { initials: string }) {
+  return (
+    <span className="avatar" aria-hidden="true">
+      {initials.slice(0, 1)}
+    </span>
+  );
+}

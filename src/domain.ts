@@ -6,6 +6,7 @@ export const memberSchema = z.object({
   name: z.string(),
   role: z.enum(["supervisor", "chw", "facility"]),
   facility_id: z.string().nullable(),
+  supervisor_id: z.string().nullable().optional(),
 });
 export const referralSchema = z.object({
   id: z.string(),
@@ -29,6 +30,7 @@ export const referralSchema = z.object({
 });
 export const workspaceSchema = z.object({
   profile: memberSchema,
+  staff: z.array(memberSchema).default([]),
   workers: z.array(memberSchema),
   facilities: z.array(z.object({ id: z.string(), name: z.string() })),
   referrals: z.array(referralSchema),
@@ -123,4 +125,26 @@ export function eatToIso(input: string) {
   return new Date(
     input + (input.length === 16 ? ":00" : "") + "+03:00",
   ).toISOString();
+}
+
+export function staffProgress(workspace: Workspace, now = Date.now()) {
+  return workspace.staff.map((member) => {
+    const referrals = workspace.referrals.filter(
+      (r) => r.chw_id === member.user_id,
+    );
+    const counts = metrics(referrals, now);
+    const actions = workspace.events
+      .filter((e) => e.actor_id === member.user_id)
+      .sort((a, b) => Date.parse(b.recorded_at) - Date.parse(a.recorded_at));
+    return {
+      member,
+      referrals,
+      assigned: referrals.length,
+      ...counts,
+      completion: referrals.length
+        ? Math.round((counts.closed / referrals.length) * 100)
+        : 0,
+      lastAction: actions[0] ?? null,
+    };
+  });
 }

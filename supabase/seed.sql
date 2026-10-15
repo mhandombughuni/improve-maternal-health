@@ -35,3 +35,9 @@ select id,case when facility_id='20000000-0000-4000-8000-000000000001' then '100
 insert into public.referral_events(referral_id,actor_id,kind,note,occurred_at)
 select id,case when facility_id='20000000-0000-4000-8000-000000000001' then '10000000-0000-4000-8000-000000000004' else '10000000-0000-4000-8000-000000000005' end::uuid,'outcome','Assessment completed · synthetic demo',outcome_at from public.referrals where outcome_at is not null;
 insert into public.notifications(referral_id,recipient_id) select id,chw_id from public.referrals where status='closed';
+-- Assign direct reports when seeding after all hosted migrations have been applied.
+do $$ begin
+ if exists(select 1 from information_schema.columns where table_schema='public' and table_name='memberships' and column_name='supervisor_id') then
+  update public.memberships set supervisor_id='10000000-0000-4000-8000-000000000001' where user_id in ('10000000-0000-4000-8000-000000000002','10000000-0000-4000-8000-000000000003');
+ end if;
+end $$;

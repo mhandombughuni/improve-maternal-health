@@ -3,13 +3,13 @@ test("one referral survives reload, is completed by the facility, and notifies t
   page,
 }, testInfo) => {
   const alias = "Demo " + Date.now();
-  await page.goto("/");
+  await page.goto("/#queue");
   await expect(
-    page.getByRole("heading", { name: "Keep every referral in view." }),
+    page.getByRole("heading", { name: "Referrals", level: 1 }),
   ).toBeVisible();
   expect(
     await page
-      .getByRole("heading", { name: "Keep every referral in view." })
+      .getByRole("heading", { name: "Referrals", level: 1 })
       .evaluate((el) => getComputedStyle(el).fontWeight),
   ).toBe("700");
   expect(
@@ -62,6 +62,7 @@ test("one referral survives reload, is completed by the facility, and notifies t
   await expect(
     page.getByText("Follow-up recorded", { exact: false }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Profile and demo access" }).click();
   await page
     .getByRole("combobox", { name: "Demo team member" })
     .selectOption({ label: "Receiving team · Highland" });
@@ -88,6 +89,7 @@ test("one referral survives reload, is completed by the facility, and notifies t
   await expect(
     page.getByRole("heading", { name: "Outcome recorded", exact: true }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Profile and demo access" }).click();
   await page
     .getByRole("combobox", { name: "Demo team member" })
     .selectOption({ label: "Grace · CHW" });
@@ -112,7 +114,7 @@ test("one referral survives reload, is completed by the facility, and notifies t
 test("queue filtering, CSV export, and public-data failure work independently", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#queue");
   const due = page.getByRole("button", { name: /Follow-up due ·/ });
   await expect(due).toBeVisible();
   const count = Number((await due.textContent())?.split("·")[1].trim());

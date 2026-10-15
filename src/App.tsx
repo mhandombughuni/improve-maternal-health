@@ -24,14 +24,22 @@ import {
   type Workspace,
 } from "./domain";
 import { Button, InputField, SelectField } from "./primitives";
+import {
+  ActivityFeed,
+  Overview,
+  StaffDetail,
+  TeamPanel,
+  teamWorkspace,
+} from "./Dashboard";
+import { DashboardShell } from "./DashboardShell";
 const go = (path: string) => {
   window.location.hash = path;
   window.scrollTo(0, 0);
 };
 function useRoute() {
-  const [route, set] = useState(location.hash.slice(1) || "queue");
+  const [route, set] = useState(location.hash.slice(1) || "overview");
   useEffect(() => {
-    const update = () => set(location.hash.slice(1) || "queue");
+    const update = () => set(location.hash.slice(1) || "overview");
     window.addEventListener("hashchange", update);
     return () => window.removeEventListener("hashchange", update);
   }, []);
@@ -103,6 +111,8 @@ export default function App() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [query, setQuery] = useState("");
+  const [staffFilter, setStaffFilter] = useState("");
   const [filter, setFilter] = useState<"open" | "due" | "closed">("open");
   const [clock, setClock] = useState(Date.now());
   const pending = useRef<Command | null>(null);
@@ -225,229 +235,262 @@ export default function App() {
     setActor(id);
     setNotice("");
     setError(null);
-    go("queue");
+    setStaffFilter("");
+    setQuery("");
+    go("overview");
   }
   return (
-    <main
-      className={`app ${mobile ? "mobile" : kind === "facility" ? "facility-view" : ""}`}
+    <DashboardShell
+      workspace={workspace}
+      kind={kind}
+      actors={actors}
+      actor={actor}
+      busy={busy}
+      loading={loading}
+      onActor={selectActor}
+      onRefresh={() => void refresh()}
+      onSignOut={() => void supabase?.auth.signOut()}
+      query={query}
+      onQuery={setQuery}
     >
-      <header className="brand">
-        <a className="wordmark" href="#queue" aria-label="TAFU home">
-          TAFU
-        </a>
-        <span className="tagline">Maternal referral coordination</span>
-        {profile && (
-          <span className="profile">
-            {profile.role === "chw"
-              ? "CHW"
-              : profile.role === "facility"
-                ? "Facility"
-                : "Supervisor"}{" "}
-            · {profile.name}
-          </span>
-        )}
-      </header>
-      <div className="eyebrow">SYNTHETIC DEMO · LUSHOTO</div>
-      <div className="workspace-bar">
-        <span className="small muted">
-          {hosted ? "Connected demo" : "Local demo · Saved on this computer"}
-        </span>
-        {!hosted && actors.length > 0 && (
-          <label className="actor-select">
-            Demo team member{" "}
-            <select
-              aria-label="Demo team member"
-              value={actor}
-              onChange={(e) => selectActor(e.target.value)}
-              disabled={busy || loading}
-            >
-              {actors.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {hosted && actor && (
-          <Button
-            variant="neutral"
-            disabled={busy || loading}
-            onPress={() => {
-              void supabase?.auth.signOut();
-            }}
-          >
-            Sign out
-          </Button>
-        )}
-      </div>
-      {error && (
-        <div className="error" role="alert">
-          {error}
-          {actor && !configurationError && (
-            <Button
-              variant="neutral"
-              onPress={() => void refresh()}
-              disabled={busy || loading}
-            >
-              Refresh records
-            </Button>
-          )}
-        </div>
-      )}
-      {notice && (
-        <p className="success small" role="status">
-          {notice}
-        </p>
-      )}
-      {hosted && !actor && !configurationError && <Login onError={setError} />}
-      {loading && !workspace && (
-        <p role="status">Loading the shared referral record…</p>
-      )}
-      {workspace && figures && (
-        <>
-          <nav className="nav" aria-label="Workspace">
-            <a
-              href="#queue"
-              aria-current={kind === "queue" ? "page" : undefined}
-            >
-              Referrals
-            </a>
-            {profile?.role === "chw" && (
-              <a
-                href="#notifications"
-                aria-current={kind === "notifications" ? "page" : undefined}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className={`app ${mobile ? "mobile" : kind === "facility" ? "facility-view" : ""}`}
+      >
+        <div className="eyebrow">SYNTHETIC DEMO · LUSHOTO</div>
+        {error && (
+          <div className="error" role="alert">
+            {error}
+            {actor && !configurationError && (
+              <Button
+                variant="neutral"
+                onPress={() => void refresh()}
+                disabled={busy || loading}
               >
-                Updates ·{" "}
-                {
-                  workspace.notifications.filter((n) => !n.acknowledged_at)
-                    .length
-                }
-              </a>
+                Refresh records
+              </Button>
             )}
-            <button
-              className="text-button"
-              onClick={() => void refresh()}
-              disabled={busy || loading}
-            >
-              {loading ? "Refreshing…" : "Refresh"}
-            </button>
-          </nav>
-          {kind === "queue" && (
-            <>
-              <PageHead title="Keep every referral in view.">
-                A shared follow-up queue for a team doing more with less.
-              </PageHead>
-              <div className="stats">
-                {[
-                  [figures.open, "Open referrals"],
-                  [figures.due, "Follow-ups due"],
-                  [figures.closed, "Outcomes recorded"],
-                ].map(([value, label]) => (
-                  <section className="card stat" key={label}>
-                    <strong>{value}</strong>
-                    <p className="small muted">{label}</p>
-                  </section>
-                ))}
-              </div>
-              <div className="toolbar">
-                <Button
-                  variant="neutral"
-                  aria-pressed={filter === "open"}
-                  onPress={() => setFilter("open")}
-                >
-                  All open · {figures.open}
-                </Button>
-                <Button
-                  variant="neutral"
-                  aria-pressed={filter === "due"}
-                  onPress={() => setFilter("due")}
-                >
-                  Follow-up due · {figures.due}
-                </Button>
-                <Button
-                  variant="neutral"
-                  aria-pressed={filter === "closed"}
-                  onPress={() => setFilter("closed")}
-                >
-                  Outcomes · {figures.closed}
-                </Button>
-                {profile?.role !== "facility" && (
-                  <Button onPress={() => go("new")}>New referral</Button>
-                )}
-                <Button
-                  variant="neutral"
-                  onPress={() => csvDownload(workspace.referrals, workspace)}
-                >
-                  Export CSV
-                </Button>
-              </div>
-              <Queue workspace={workspace} filter={filter} now={clock} />
-              <p className="small muted">
-                All records are synthetic. Counts reflect the referrals visible
-                to the selected team member.
-              </p>
-              <CountryContext actor={actor} />
-            </>
-          )}
-          {kind === "new" &&
-            (profile?.role === "supervisor" || profile?.role === "chw") && (
-              <NewReferral
-                key={actor}
+          </div>
+        )}
+        {notice && (
+          <p className="success small" role="status">
+            {notice}
+          </p>
+        )}
+        {hosted && !actor && !configurationError && (
+          <Login onError={setError} />
+        )}
+        {loading && !workspace && (
+          <p role="status">Loading the shared referral record…</p>
+        )}
+        {workspace && figures && (
+          <>
+            {kind === "overview" && (
+              <Overview
+                workspace={workspace}
+                now={clock}
+                onExport={() =>
+                  csvDownload(teamWorkspace(workspace).referrals, workspace)
+                }
+                onDue={() => {
+                  setFilter("due");
+                  go("queue");
+                }}
+              />
+            )}
+            {kind === "team" && profile?.role === "supervisor" && (
+              <>
+                <PageHead title="My team">
+                  Staff activity and referral progress for your direct reports.
+                </PageHead>
+                <TeamPanel workspace={workspace} now={clock} full />
+                <ActivityFeed workspace={teamWorkspace(workspace)} limit={15} />
+              </>
+            )}
+            {kind === "staff" && profile?.role === "supervisor" && (
+              <StaffDetail
+                workspace={workspace}
+                staffId={route.split("/")[1]}
+                now={clock}
+              />
+            )}
+            {(kind === "team" || kind === "staff") &&
+              profile?.role !== "supervisor" && (
+                <section className="card">
+                  <h1>Supervisor access required</h1>
+                  <p>Staff monitoring is available to assigned supervisors.</p>
+                  <a href="#overview">Return to overview</a>
+                </section>
+              )}
+            {kind === "activity" && (
+              <>
+                <PageHead title="Activity">
+                  A shared history of recorded workflow events.
+                </PageHead>
+                <ActivityFeed
+                  workspace={
+                    profile?.role === "supervisor"
+                      ? teamWorkspace(workspace)
+                      : workspace
+                  }
+                  limit={100}
+                />
+              </>
+            )}
+            {kind === "queue" && (
+              <>
+                <PageHead title="Referrals">
+                  Track handovers, assign follow-ups, and close the loop.
+                </PageHead>
+                <div className="stats">
+                  {[
+                    [figures.open, "Open referrals"],
+                    [figures.due, "Follow-ups due"],
+                    [figures.closed, "Outcomes recorded"],
+                  ].map(([value, label]) => (
+                    <section className="card stat" key={label}>
+                      <strong>{value}</strong>
+                      <p className="small muted">{label}</p>
+                    </section>
+                  ))}
+                </div>
+                <div className="toolbar">
+                  <Button
+                    variant="neutral"
+                    aria-pressed={filter === "open"}
+                    onPress={() => setFilter("open")}
+                  >
+                    All open · {figures.open}
+                  </Button>
+                  <Button
+                    variant="neutral"
+                    aria-pressed={filter === "due"}
+                    onPress={() => setFilter("due")}
+                  >
+                    Follow-up due · {figures.due}
+                  </Button>
+                  <Button
+                    variant="neutral"
+                    aria-pressed={filter === "closed"}
+                    onPress={() => setFilter("closed")}
+                  >
+                    Outcomes · {figures.closed}
+                  </Button>
+                  {profile?.role !== "facility" && (
+                    <Button onPress={() => go("new")}>New referral</Button>
+                  )}
+                  <Button
+                    variant="neutral"
+                    onPress={() => csvDownload(workspace.referrals, workspace)}
+                  >
+                    Export CSV
+                  </Button>
+                </div>
+                <div className="queue-search-controls">
+                  <InputField
+                    label="Search referrals"
+                    type="search"
+                    placeholder="Alias, village, referral, or worker"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  {profile?.role === "supervisor" && (
+                    <SelectField
+                      label="Assigned CHW"
+                      value={staffFilter}
+                      onChange={(e) => setStaffFilter(e.target.value)}
+                    >
+                      <option value="">All workers</option>
+                      {workspace.workers.map((m) => (
+                        <option key={m.user_id} value={m.user_id}>
+                          {m.name}
+                        </option>
+                      ))}
+                    </SelectField>
+                  )}
+                </div>
+                <Queue
+                  workspace={workspace}
+                  filter={filter}
+                  now={clock}
+                  query={query}
+                  staffId={staffFilter}
+                />
+                <p className="small muted">
+                  All records are synthetic. Counts reflect the referrals
+                  visible to the selected team member.
+                </p>
+                <CountryContext actor={actor} />
+              </>
+            )}
+            {kind === "new" &&
+              (profile?.role === "supervisor" || profile?.role === "chw") && (
+                <NewReferral
+                  key={actor}
+                  workspace={workspace}
+                  execute={execute}
+                  busy={busy}
+                />
+              )}
+            {(kind === "referral" || kind === "facility") &&
+              (selected ? (
+                <>
+                  <Button variant="neutral" onPress={() => go("queue")}>
+                    Back to queue
+                  </Button>
+                  {kind === "facility" ? (
+                    <Facility
+                      key={selected.id}
+                      referral={selected}
+                      workspace={workspace}
+                      execute={execute}
+                      busy={busy}
+                    />
+                  ) : (
+                    <Detail
+                      key={selected.id}
+                      referral={selected}
+                      workspace={workspace}
+                      execute={execute}
+                      busy={busy}
+                    />
+                  )}
+                </>
+              ) : (
+                <div className="card">
+                  <h1>Referral not available</h1>
+                  <p>This team member cannot access the selected referral.</p>
+                  <Button onPress={() => go("queue")}>Back to queue</Button>
+                </div>
+              ))}
+            {kind === "notifications" && profile?.role === "chw" && (
+              <Notifications
                 workspace={workspace}
                 execute={execute}
                 busy={busy}
               />
             )}
-          {(kind === "referral" || kind === "facility") &&
-            (selected ? (
+            {![
+              "overview",
+              "team",
+              "staff",
+              "activity",
+              "queue",
+              "new",
+              "referral",
+              "facility",
+              "notifications",
+            ].includes(kind) && (
               <>
-                <Button variant="neutral" onPress={() => go("queue")}>
-                  Back to queue
-                </Button>
-                {kind === "facility" ? (
-                  <Facility
-                    key={selected.id}
-                    referral={selected}
-                    workspace={workspace}
-                    execute={execute}
-                    busy={busy}
-                  />
-                ) : (
-                  <Detail
-                    key={selected.id}
-                    referral={selected}
-                    workspace={workspace}
-                    execute={execute}
-                    busy={busy}
-                  />
-                )}
+                <h1>Page not found</h1>
+                <a href="#queue">Return to referrals</a>
               </>
-            ) : (
-              <div className="card">
-                <h1>Referral not available</h1>
-                <p>This team member cannot access the selected referral.</p>
-                <Button onPress={() => go("queue")}>Back to queue</Button>
-              </div>
-            ))}
-          {kind === "notifications" && profile?.role === "chw" && (
-            <Notifications
-              workspace={workspace}
-              execute={execute}
-              busy={busy}
-            />
-          )}
-          {!["queue", "new", "referral", "facility", "notifications"].includes(
-            kind,
-          ) && (
-            <>
-              <h1>Page not found</h1>
-              <a href="#queue">Return to referrals</a>
-            </>
-          )}
-        </>
-      )}
-    </main>
+            )}
+          </>
+        )}
+      </main>
+    </DashboardShell>
   );
 }
 type Execute = (
@@ -458,12 +501,23 @@ function Queue({
   workspace: w,
   filter,
   now,
+  query = "",
+  staffId = "",
 }: {
+  query?: string;
+  staffId?: string;
   workspace: Workspace;
   filter: "open" | "due" | "closed";
   now: number;
 }) {
   const records = w.referrals
+    .filter(
+      (r) =>
+        (!staffId || r.chw_id === staffId) &&
+        `${r.alias} ${r.code} ${r.village} ${w.workers.find((m) => m.user_id === r.chw_id)?.name}`
+          .toLowerCase()
+          .includes(query.toLowerCase()),
+    )
     .filter((r) =>
       filter === "due"
         ? isDue(r, now)

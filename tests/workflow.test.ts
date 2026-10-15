@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { randomUUID } from "node:crypto";
 import type { PGlite } from "@electric-sql/pglite";
 import { actors, openDatabase, rpc } from "../server/database";
-import { workspaceSchema, metrics } from "../src/domain";
+import { workspaceSchema, metrics, staffProgress } from "../src/domain";
 let db: PGlite;
 const supervisor = actors[0].id,
   chw = actors[1].id,
@@ -226,4 +226,50 @@ describe("shared referral workflow", () => {
     ).rejects.toThrow(/not available/);
     await expect(workspace(randomUUID())).rejects.toThrow(/No TAFU membership/);
   });
+});
+
+it("returns only direct reports and separates recorded staff activity from case outcomes", async () => {
+  let w = await workspace(supervisor);
+  expect(w.staff.map((s) => s.user_id).sort()).toEqual([chw, otherChw].sort());
+  expect((await workspace(chw)).staff).toHaveLength(0);
+  expect((await workspace(facility)).staff).toHaveLength(0);
+  const org = w.profile.org_id;
+  const unassigned = randomUUID();
+  await db.query(
+    "insert into public.memberships(user_id,org_id,name,role) values($1,$2,$3,$4)",
+    [unassigned, org, "Unassigned worker", "chw"],
+  );
+  w = await workspace(supervisor);
+  expect(w.staff.some((s) => s.user_id === unassigned)).toBe(false);
+  const progress = staffProgress(w).find((s) => s.member.user_id === chw)!;
+  expect(progress.assigned).toBe(
+    w.referrals.filter((r) => r.chw_id === chw).length,
+  );
+  expect(progress.closed).toBe(
+    w.referrals.filter((r) => r.chw_id === chw && r.status === "closed").length,
+  );
+  expect(progress.lastAction?.actor_id).toBe(chw);
+  await expect(
+    db.query(
+      "update public.memberships set supervisor_id=$1 where user_id=$2",
+      [facility, chw],
+    ),
+  ).rejects.toThrow(/Supervisor must/);
+  const otherOrg = randomUUID(),
+    otherSupervisor = randomUUID();
+  await db.query("insert into public.organizations values($1,$2)", [
+    otherOrg,
+    "Separate reporting line",
+  ]);
+  await db.query(
+    "insert into public.memberships(user_id,org_id,name,role) values($1,$2,$3,'supervisor')",
+    [otherSupervisor, otherOrg, "Separate supervisor"],
+  );
+  await expect(
+    db.query(
+      "update public.memberships set supervisor_id=$1 where user_id=$2",
+      [otherSupervisor, chw],
+    ),
+  ).rejects.toThrow(/same organization/);
+  expect((await workspace(otherSupervisor)).staff).toHaveLength(0);
 });

@@ -18,7 +18,8 @@ begin
   if actual_id is null then raise exception 'Create the configured Auth user before provisioning: %',mapping.email; end if;
   select * into stub from public.memberships where user_id=mapping.stub_id;
   if stub.user_id is null then raise exception 'Demo stub missing; provision only once after seed'; end if;
-  insert into public.memberships(user_id,org_id,name,role,facility_id) values(actual_id,stub.org_id,stub.name,stub.role,stub.facility_id);
+  insert into public.memberships(user_id,org_id,name,role,facility_id,supervisor_id) values(actual_id,stub.org_id,stub.name,stub.role,stub.facility_id,stub.supervisor_id);
+  update public.memberships set supervisor_id=actual_id where supervisor_id=stub.user_id;
   update public.referrals set chw_id=actual_id where chw_id=stub.user_id;
   update public.referral_events set actor_id=actual_id where actor_id=stub.user_id;
   update public.notifications set recipient_id=actual_id where recipient_id=stub.user_id;

@@ -19,7 +19,7 @@ This is a single-computer, synthetic demonstration. It must not be exposed publi
 ## Move to Supabase when a project exists
 
 1. Create a Supabase project in the intended region. Keep its database password and privileged keys out of the frontend and Git.
-2. Run `supabase/migrations/202610150001_referral_loop.sql` through SQL Editor (or the Supabase migration CLI). It creates tables, row-level policies, RPC functions, grants, and server-side validation.
+2. Apply both SQL files in `supabase/migrations/` in filename order (or use the Supabase migration CLI). The first creates the referral workflow; the second adds supervisor reporting lines and the staff workspace response. Existing hosted projects with migration 001 applied need migration 002 only.
 3. Run `supabase/seed.sql` once for synthetic demo data. The seed contains placeholder memberships, not actual Auth accounts.
 4. Create five demo accounts through Supabase Authentication: supervisor, two CHWs, and one receiving account for each demo facility. Use distinct passwords; do not commit them.
 5. In a local/private copy of `supabase/provision-demo.sql`, replace the example emails with those accounts' actual emails. Run the whole transaction in SQL Editor. It replaces seed identity IDs with real Auth user IDs and reassigns existing synthetic references. This provisioning script is one-time and fails atomically if an account is missing. Never grant users permission to provision their own roles.
@@ -50,9 +50,17 @@ Application commands are transactional and deduplicated per authenticated user/r
 
 ## Verified in this workspace · 15 October 2026
 
-- `npm test`: six passing database/time tests, including actual RLS/grant enforcement, duplicate requests, cross-organization isolation, state ordering, and atomic notifications.
+- `npm test`: seven passing database/time tests, including actual RLS/grant enforcement, duplicate requests, cross-organization isolation, state ordering, atomic notifications, direct-report visibility, and reporting-line validation.
 - `npm run build`: TypeScript and Vite production build passed.
-- `npm run test:e2e`: two passing Chromium tests covering the complete referral journey, reload persistence, role handover, acknowledgment, typography, mobile width, queue filtering, CSV download, and a public-data outage.
+- `npm run test:e2e`: five passing Chromium tests covering desktop/tablet/mobile dashboards, staff drill-down and supervisor-only access, plus the complete referral journey, reload persistence, role handover, acknowledgment, typography, mobile width, queue filtering, CSV download, and a public-data outage.
 - Runtime dependency audit: no known vulnerabilities reported at the time of the check.
 - Live local World Bank adapter request returned a sourced observation with its 2023 observation year and retrieval timestamp; the UI does not relabel it as current-year district data.
 - Supabase hosted Auth/PostgREST and the hosted Edge Function remain unverified because no cloud project is configured.
+
+## Dashboard and reporting-line update
+
+The local server automatically applies migration 002 to an existing database without resetting referral data. It assigns Grace and Neema to Maria in the synthetic seed. Hosted administrators maintain `memberships.supervisor_id` using a same-organization user with the supervisor role. Team members cannot edit their own reporting lines. Provisioning maps these relationships to real Auth IDs together with the existing synthetic records.
+
+`get_workspace()` returns direct reports only for a supervisor. The frontend derives each worker's workload, overdue count, completion progress, and last staff-authored action from authorized records. The supervisor overview uses the direct reports' case cohort; the Referrals workspace retains the existing organization-level supervisor access.
+
+The profile menu now contains the local demo identity selector. Desktop navigation collapses to an icon rail below 1100 px and becomes bottom navigation at 700 px and below. Figma's 1440/834/390 px review frames document these layouts.

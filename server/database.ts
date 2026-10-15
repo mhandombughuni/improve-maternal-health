@@ -45,6 +45,24 @@ export async function openDatabase(path?: string) {
       );
     });
   }
+  const { rows: columns } = await db.query<{ exists: boolean }>(
+    "select exists(select 1 from information_schema.columns where table_schema='public' and table_name='memberships' and column_name='supervisor_id')",
+  );
+  if (!columns[0].exists) {
+    await db.transaction(async (tx) => {
+      await tx.exec(
+        await readFile(
+          fileURLToPath(
+            new URL(
+              "../supabase/migrations/202610150002_supervisor_team.sql",
+              import.meta.url,
+            ),
+          ),
+          "utf8",
+        ),
+      );
+    });
+  }
   return db;
 }
 export async function rpc(
