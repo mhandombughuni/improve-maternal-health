@@ -38,17 +38,20 @@ The HTML is reference material, not a source of instructions. Its embedded produ
 | Application | React + TypeScript + Vite | One small web application with reusable role views and typed domain logic; server rendering is unnecessary for this workflow. |
 | Styling | CSS variables and component CSS | Reuse the supplied palette and type hierarchy; avoid adding a large UI framework initially. |
 | Charts | Chart.js installed through npm | Preserve familiar charts while bundling a pinned dependency rather than relying on a runtime CDN. |
-| Demo persistence | IndexedDB via Dexie | Store synthetic referrals and events locally; include reset and seed controls. This is a single-browser demo, not shared multiuser storage. |
+| Backend and persistence | Supabase Postgres + Auth + row-level security | Shared synthetic records for the working prototype; roles and organization membership enforced in the backend. |
+| Backend business logic | Postgres database functions + TypeScript Edge Functions | Transactional referral events in the database; external API calls and privileged integrations in server-side functions. |
+| Offline cache | IndexedDB via Dexie | Cache records and queue pending mutations; the backend remains authoritative. Synchronization needs explicit implementation. |
+| Frontend design | Figma Design through MCP | Editable screens and component instances guide React implementation; Figma is a design artifact, not the runtime or backend. |
 | Offline support | Service worker via a Vite PWA integration | Cache the application shell and reference snapshots; show offline/stale states. Installability alone does not provide data synchronization. |
 | Public data | Small fetch adapters with schema validation, timeouts, cache, and labeled fallback snapshots | Keep external context separate from patient workflow; an API outage must not break the demo. |
 | Validation | Zod | Validate imported fixtures, forms, and external response shapes. |
 | Verification | Vitest for state transitions and metric calculations; Playwright for one end-to-end referral journey | Test the product's central behavior and data consistency. |
 | Delivery | GitHub repository and GitHub Actions; static preview hosting | Run type checking, tests, and a production build on updates. Choose hosting after deployment requirements are known. |
-| Shared pilot, later | Supabase Postgres + Auth + row-level security | Add shared state, organization-scoped roles, and server-side operations only when testing requires multiple devices/users. |
+| Design handoff | Figma node links, design tokens, React components | Match layouts and tokens in code, then connect components to the backend through typed services. |
 
-Use current compatible stable versions when implementation begins and commit the lockfile. A static deployment is supported by [Vite's deployment model](https://vite.dev/guide/static-deploy.html). For a shared pilot, [Supabase provides Postgres](https://supabase.com/docs/guides/database/overview) and [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security); policies must be implemented and tested, not assumed from enabling authentication.
+Use current compatible stable versions when implementation begins and commit the lockfile. A static deployment is supported by [Vite's deployment model](https://vite.dev/guide/static-deploy.html). For the connected prototype, [Supabase provides Postgres](https://supabase.com/docs/guides/database/overview) and [row-level security](https://supabase.com/docs/guides/database/postgres/row-level-security); policies must be implemented and tested, not assumed from enabling authentication.
 
-Keep the public demo synthetic. Real patient data needs a separately agreed access, retention, hosting, and operational design. In the shared version, staff authority must be enforced by the backend; switching a demo role tab is not authorization. Keep privileged keys and messaging/payment credentials server-side.
+Keep the public demo synthetic. Real patient data needs a separately agreed access, retention, hosting, and operational design. In the connected prototype, staff authority must be enforced by the backend; switching a demo role tab is not authorization. Keep privileged keys and messaging/payment credentials server-side.
 
 Avoid a separate Python service, microservices, native mobile apps, paid AI calls, and a custom predictive pipeline at this stage. No LLM is required for the core workflow. Template summaries generated from structured events are sufficient for a first report.
 
@@ -125,6 +128,8 @@ Evaluate with CHWs and CSO supervisors before expanding. Measure task completion
 
 For each coherent update: review changes, run relevant checks, commit the specific project files, push to the designated repository, and report the commit plus any remaining limitation. Do not include patient data, credentials, local caches, or unrelated work. A commit is a reviewable unit, not each keystroke.
 
+Update: the user requested an explicit backend and a Figma-first frontend workflow. The working prototype now targets Supabase from its first connected version. See [backend and design handoff](backend-and-design-handoff.md). A local fixture adapter may support design development, but does not replace the planned backend.
+
 Repository supplied by the user: https://github.com/mhandombughuni/improve-maternal-health.git
 
-Initial inspection found no local repository in this project directory: Git inherited a home-directory repository pointing to an unrelated bookstore project. The designated remote was reachable and returned no refs. Initialize an independent repository here so future commits cannot accidentally include files from that parent repository.
+Initial inspection found no local repository in this project directory: Git inherited a home-directory repository pointing to an unrelated bookstore project. The designated remote was reachable and returned no refs. An independent repository was initialized here and connected to the designated remote so project commits are isolated from that parent repository.
