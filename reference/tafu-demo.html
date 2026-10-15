@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tafu — Maternal Referral Loop Closure</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+<style>
+/* ============ DESIGN SYSTEM ============ */
+:root {
+  --bg: #F4EFE6;
+  --bg-elevated: #FBF7EE;
+  --ink: #1A1F2E;
+  --ink-muted: #5A6070;
+  --ink-subtle: #8A8F9C;
+  --rule: #D8CFBE;
+  --rule-soft: #E8DFCD;
+  --accent: #B04A2F;
+  --accent-soft: #D98B6E;
+  --accent-bg: #F2DDD0;
+  --good: #4A6B47;
+  --good-bg: #DDE4D5;
+  --warn: #A67C20;
+  --warn-bg: #EFE1B9;
+  --bad: #923524;
+  --bad-bg: #EED2C9;
+  --sky: #3A5A7A;
+  --sky-bg: #D8E2EC;
+  --shadow-sm: 0 1px 2px rgba(26,31,46,0.04);
+  --shadow-md: 0 2px 8px rgba(26,31,46,0.06);
+  --serif: 'Fraunces', Georgia, serif;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+/* Subtle paper texture */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: radial-gradient(circle at 20% 30%, rgba(176,74,47,0.02) 0%, transparent 40%),
+                    radial-gradient(circle at 80% 70%, rgba(58,90,122,0.02) 0%, transparent 40%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.app { position: relative; z-index: 1; }
+
+/* ============ HEADER ============ */
+.header {
+  border-bottom: 1px solid var(--rule);
+  background: var(--bg);
+  position: sticky; top: 0; z-index: 50;
+  backdrop-filter: blur(8px);
+  background: rgba(244,239,230,0.92);
+}
+.header-inner {
+  max-width: 1440px; margin: 0 auto;
+  padding: 18px 32px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.brand { display: flex; align-items: baseline; gap: 14px; }
+.brand-mark {
+  font-family: var(--serif);
+  font-size: 28px; font-weight: 500;
+  letter-spacing: -0.02em;
+  font-feature-settings: "ss01", "ss02";
+}
+.brand-mark::before {
+  content: '';
+  display: inline-block;
+  width: 8px; height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  margin-right: 10px;
+  vertical-align: middle;
+  transform: translateY(-2px);
+}
+.brand-meta {
+  font-size: 11px;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 500;
+}
+.brand-meta em { font-family: var(--serif); font-style: italic; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 400; color: var(--ink); }
+
+.tabs { display: flex; gap: 2px; background: var(--rule-soft); padding: 3px; border-radius: 8px; }
+.tab {
+  background: transparent; border: 0;
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  color: var(--ink-muted);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tab:hover { color: var(--ink); }
+.tab.active { background: var(--bg-elevated); color: var(--ink); box-shadow: var(--shadow-sm); }
+
+.header-right { display: flex; align-items: center; gap: 20px; }
+.demo-btn {
+  font-family: var(--sans); font-size: 12px; font-weight: 600;
+  background: var(--ink); color: var(--bg);
+  border: 0; padding: 9px 16px; border-radius: 6px;
+  cursor: pointer; letter-spacing: 0.02em;
+  display: flex; align-items: center; gap: 8px;
+  transition: all 0.15s;
+}
+.demo-btn:hover { background: var(--accent); }
+.demo-btn svg { width: 12px; height: 12px; }
+
+/* ============ LAYOUT ============ */
+.view { display: none; }
+.view.active { display: block; animation: fadeIn 0.4s; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.container { max-width: 1440px; margin: 0 auto; padding: 32px; }
+
+/* ============ COMMISSIONER VIEW ============ */
+.page-head {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  margin-bottom: 28px; padding-bottom: 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.page-title {
+  font-family: var(--serif); font-weight: 400;
+  font-size: 36px; line-height: 1.1; letter-spacing: -0.02em;
+}
+.page-title em { font-style: italic; color: var(--accent); }
+.page-subtitle {
+  font-size: 13px; color: var(--ink-muted); margin-top: 8px;
+  font-family: var(--mono); font-weight: 400;
+}
+.page-filters { display: flex; gap: 10px; align-items: center; }
+.filter-chip {
+  background: var(--bg-elevated); border: 1px solid var(--rule);
+  padding: 6px 12px; border-radius: 6px;
+  font-size: 12px; font-weight: 500; color: var(--ink);
+  cursor: pointer;
+  font-family: var(--sans);
+}
+.filter-chip:hover { border-color: var(--ink-muted); }
+.filter-chip .label { color: var(--ink-subtle); margin-right: 6px; font-weight: 400; }
+
+/* Narrative brief */
+.brief {
+  background: var(--bg-elevated);
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  padding: 28px 32px;
+  margin-bottom: 32px;
+  position: relative;
+}
+.brief-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 10px;
+}
+.brief-label .pulse {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.brief-body {
+  font-family: var(--serif); font-size: 18px; line-height: 1.55;
+  font-weight: 400; max-width: 920px;
+  color: var(--ink);
+}
+.brief-body strong { font-weight: 600; color: var(--ink); }
+.brief-body em { color: var(--accent); font-style: normal; font-weight: 500; }
+.brief-footer {
+  margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--rule);
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 11px; color: var(--ink-subtle);
+}
+
+/* KPI row */
+.kpi-row {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 1px; background: var(--rule);
+  border: 1px solid var(--rule); margin-bottom: 32px;
+}
+.kpi {
+  background: var(--bg-elevated); padding: 24px 28px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.kpi-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--ink-muted); letter-spacing: 0.14em; text-transform: uppercase;
+}
+.kpi-value {
+  font-family: var(--serif); font-size: 42px; font-weight: 400;
+  letter-spacing: -0.02em; line-height: 1;
+}
+.kpi-value .unit { font-size: 16px; color: var(--ink-muted); margin-left: 4px; }
+.kpi-delta {
+  font-size: 12px; font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.kpi-delta.up { color: var(--good); }
+.kpi-delta.down { color: var(--bad); }
+.kpi-delta.neutral { color: var(--ink-muted); }
+.kpi-delta .caret { font-family: var(--mono); }
+
+/* Main grid */
+.grid-main {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 24px; margin-bottom: 24px;
+}
+
+.panel {
+  background: var(--bg-elevated);
+  border: 1px solid var(--rule);
+}
+.panel-head {
+  padding: 20px 24px 14px;
+  border-bottom: 1px solid var(--rule-soft);
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.panel-title {
+  font-family: var(--serif); font-size: 20px; font-weight: 500;
+  letter-spacing: -0.01em;
+}
+.panel-sub {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+  text-transform: uppercase; letter-spacing: 0.1em;
+  margin-top: 4px;
+}
+.panel-actions { display: flex; gap: 6px; }
+.panel-toggle {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  background: transparent; border: 1px solid var(--rule);
+  padding: 4px 9px; border-radius: 4px; cursor: pointer;
+  color: var(--ink-muted); letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.panel-toggle.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.panel-body { padding: 24px; }
+
+/* Funnel */
+.funnel { display: flex; flex-direction: column; gap: 6px; }
+.funnel-stage {
+  display: grid; grid-template-columns: 150px 1fr 80px;
+  gap: 14px; align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--rule-soft);
+}
+.funnel-stage:last-child { border-bottom: 0; }
+.funnel-label {
+  font-size: 12px; font-weight: 500;
+}
+.funnel-label .idx {
+  font-family: var(--mono); color: var(--ink-subtle);
+  margin-right: 8px; font-weight: 400;
+}
+.funnel-bar-wrap { background: var(--rule-soft); height: 28px; position: relative; overflow: hidden; }
+.funnel-bar {
+  height: 100%; background: var(--ink);
+  display: flex; align-items: center; padding: 0 10px;
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--bg);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.funnel-bar.drop { background: var(--accent); }
+.funnel-count {
+  font-family: var(--mono); font-size: 13px; font-weight: 500;
+  text-align: right;
+}
+.funnel-count .loss {
+  display: block; color: var(--bad); font-size: 10px; margin-top: 2px;
+}
+
+/* Partner table */
+.ptable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ptable th {
+  text-align: left; font-weight: 500; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--ink-muted); padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+  font-family: var(--mono);
+}
+.ptable th.num { text-align: right; }
+.ptable td {
+  padding: 14px 12px; border-bottom: 1px solid var(--rule-soft);
+  vertical-align: middle;
+}
+.ptable td.num { text-align: right; font-family: var(--mono); font-weight: 500; }
+.ptable tr:last-child td { border-bottom: 0; }
+.ptable tr.highlight td { background: var(--accent-bg); }
+.ptable .partner-name { font-weight: 500; }
+.ptable .partner-sub { font-size: 11px; color: var(--ink-subtle); margin-top: 2px; font-family: var(--mono); }
+.badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  padding: 2px 7px; border-radius: 3px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.badge-good { background: var(--good-bg); color: var(--good); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); }
+.badge-bad { background: var(--bad-bg); color: var(--bad); }
+.badge-neutral { background: var(--rule-soft); color: var(--ink-muted); }
+
+/* Chart container */
+.chart-wrap { height: 280px; position: relative; }
+.chart-wrap-sm { height: 220px; position: relative; }
+
+/* Callout */
+.callout {
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  padding: 14px 18px;
+  margin-top: 16px;
+  font-size: 12px; color: var(--ink-muted);
+  font-style: italic; font-family: var(--serif);
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.callout::before {
+  content: '⚘'; color: var(--accent); font-size: 16px;
+  font-style: normal; flex-shrink: 0;
+  margin-top: -2px;
+}
+
+/* Finding cards */
+.findings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+.finding {
+  background: var(--bg-elevated); border: 1px solid var(--rule);
+  padding: 20px;
+}
+.finding-tag {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--accent); letter-spacing: 0.14em;
+  text-transform: uppercase; margin-bottom: 10px;
+}
+.finding-head {
+  font-family: var(--serif); font-size: 17px; font-weight: 500;
+  line-height: 1.3; margin-bottom: 10px; letter-spacing: -0.01em;
+}
+.finding-body {
+  font-size: 12px; color: var(--ink-muted); line-height: 1.6;
+}
+.finding-stat {
+  font-family: var(--serif); font-size: 32px; font-weight: 400;
+  color: var(--accent); letter-spacing: -0.02em; line-height: 1;
+  margin: 12px 0 8px;
+}
+
+/* ============ SUPERVISOR VIEW ============ */
+.sup-layout { display: grid; grid-template-columns: 1fr 420px; gap: 24px; }
+.sup-main { background: var(--bg-elevated); border: 1px solid var(--rule); }
+.sup-filters {
+  padding: 16px 24px; border-bottom: 1px solid var(--rule-soft);
+  display: flex; gap: 10px; align-items: center;
+}
+.sup-filters .lbl {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.1em;
+  margin-right: 8px;
+}
+
+.case-list { }
+.case {
+  display: grid; grid-template-columns: 60px 1fr 220px 120px;
+  gap: 14px; padding: 18px 24px;
+  border-bottom: 1px solid var(--rule-soft);
+  cursor: pointer; transition: background 0.1s;
+  align-items: center;
+}
+.case:hover { background: var(--bg); }
+.case.selected { background: var(--accent-bg); border-left: 3px solid var(--accent); padding-left: 21px; }
+
+.risk-dial {
+  width: 54px; height: 54px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
+.risk-dial svg { position: absolute; inset: 0; }
+.risk-dial .pct {
+  font-family: var(--mono); font-size: 13px; font-weight: 600;
+  position: relative; z-index: 1;
+}
+.case-who { font-weight: 500; font-size: 14px; }
+.case-meta {
+  font-family: var(--mono); font-size: 11px; color: var(--ink-muted);
+  margin-top: 4px; display: flex; gap: 12px;
+}
+.case-meta .dot { color: var(--rule); }
+.case-signal {
+  font-size: 11px; color: var(--ink-muted);
+  font-family: var(--sans);
+}
+.case-signal .primary { color: var(--ink); font-weight: 500; display: block; margin-bottom: 2px; }
+.case-elapsed {
+  font-family: var(--mono); font-size: 11px;
+  text-align: right;
+}
+.case-elapsed .big { font-size: 16px; color: var(--ink); font-weight: 500; display: block; }
+
+/* Alerts sidebar */
+.alerts { display: flex; flex-direction: column; gap: 16px; }
+.alert-card {
+  background: var(--bg-elevated); border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent); padding: 18px 20px;
+}
+.alert-card.critical { border-left-color: var(--bad); }
+.alert-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
+}
+.alert-type {
+  font-family: var(--mono); font-size: 10px; font-weight: 600;
+  color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase;
+}
+.alert-card.critical .alert-type { color: var(--bad); }
+.alert-time { font-family: var(--mono); font-size: 10px; color: var(--ink-subtle); }
+.alert-body {
+  font-family: var(--serif); font-size: 15px; line-height: 1.4;
+  margin-bottom: 14px;
+}
+.alert-body strong { font-weight: 600; }
+.alert-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.action-btn {
+  font-family: var(--sans); font-size: 11px; font-weight: 500;
+  background: var(--ink); color: var(--bg);
+  border: 0; padding: 7px 12px; border-radius: 4px;
+  cursor: pointer; letter-spacing: 0.02em;
+}
+.action-btn:hover { background: var(--accent); }
+.action-btn.secondary {
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--rule);
+}
+.action-btn.secondary:hover { border-color: var(--ink); }
+
+/* ============ CHW VIEW ============ */
+.chw-stage {
+  display: flex; justify-content: center;
+  padding: 40px 20px; min-height: calc(100vh - 200px);
+}
+.phone {
+  width: 380px; background: #2A2A35;
+  border-radius: 36px; padding: 10px;
+  box-shadow: 0 20px 60px rgba(26,31,46,0.15), 0 0 0 1px var(--rule);
+  position: relative;
+}
+.phone::before {
+  content: ''; position: absolute; top: 14px; left: 50%;
+  transform: translateX(-50%); width: 80px; height: 22px;
+  background: #1A1A24; border-radius: 12px; z-index: 2;
+}
+.phone-screen {
+  background: #F8F4EA; border-radius: 28px;
+  min-height: 680px; overflow: hidden; position: relative;
+}
+.phone-status {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 24px 8px; font-family: var(--mono); font-size: 11px;
+  color: var(--ink);
+}
+.phone-header {
+  padding: 30px 20px 16px; border-bottom: 1px solid var(--rule-soft);
+  background: var(--bg-elevated);
+}
+.chw-greet { font-size: 12px; color: var(--ink-muted); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em; }
+.chw-name { font-family: var(--serif); font-size: 22px; font-weight: 500; margin-top: 4px; }
+.chw-location { font-size: 12px; color: var(--ink-muted); margin-top: 3px; font-family: var(--mono); }
+
+.notif-strip {
+  margin: 14px 18px;
+  background: var(--good-bg); border: 1px solid var(--good);
+  padding: 12px 14px; border-radius: 8px;
+  display: flex; gap: 10px; align-items: flex-start;
+  animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  display: none;
+}
+.notif-strip.show { display: flex; }
+@keyframes slideIn { from { transform: translateY(-8px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.notif-strip .icon {
+  width: 24px; height: 24px; flex-shrink: 0;
+  background: var(--good); color: white;
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600;
+}
+.notif-body { font-size: 12px; line-height: 1.5; }
+.notif-title { font-weight: 600; margin-bottom: 3px; color: var(--good); }
+
+.chw-section-head {
+  padding: 14px 20px 8px;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.12em;
+  display: flex; justify-content: space-between;
+}
+.chw-list { padding: 0 18px; }
+.chw-case {
+  background: var(--bg-elevated); border: 1px solid var(--rule);
+  padding: 14px; margin-bottom: 10px; border-radius: 8px;
+}
+.chw-case.active { border-left: 3px solid var(--accent); padding-left: 12px; }
+.chw-case.closed { opacity: 0.75; }
+.chw-case-row { display: flex; justify-content: space-between; align-items: flex-start; }
+.chw-case-name { font-weight: 600; font-size: 14px; }
+.chw-case-detail { font-size: 11px; color: var(--ink-muted); margin-top: 3px; font-family: var(--mono); }
+.chw-case-status {
+  font-family: var(--mono); font-size: 9px; font-weight: 600;
+  padding: 3px 7px; border-radius: 3px;
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
+.chw-case-progress {
+  display: flex; gap: 3px; margin-top: 10px;
+}
+.chw-step {
+  flex: 1; height: 4px; background: var(--rule-soft);
+  border-radius: 2px;
+}
+.chw-step.done { background: var(--good); }
+.chw-step.current { background: var(--accent); animation: pulseBar 1.5s infinite; }
+@keyframes pulseBar { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+.chw-fab {
+  position: absolute; bottom: 24px; right: 24px;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--accent); color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; font-weight: 300;
+  box-shadow: 0 4px 16px rgba(176,74,47,0.35);
+  cursor: pointer;
+}
+
+/* ============ DEMO OVERLAY ============ */
+.demo-overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(26,31,46,0.72); backdrop-filter: blur(4px);
+  display: none; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.demo-overlay.show { display: flex; }
+.demo-modal {
+  background: var(--bg-elevated);
+  max-width: 580px; width: 100%;
+  border: 1px solid var(--rule);
+  padding: 36px 40px;
+  position: relative;
+  animation: modalIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.demo-step-label {
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.demo-step-title {
+  font-family: var(--serif); font-size: 28px; font-weight: 500;
+  letter-spacing: -0.02em; line-height: 1.15;
+  margin-bottom: 14px;
+}
+.demo-step-title em { font-style: italic; color: var(--accent); }
+.demo-step-body {
+  font-size: 14px; line-height: 1.6; color: var(--ink);
+  margin-bottom: 26px;
+}
+.demo-step-body strong { font-weight: 600; }
+.demo-progress {
+  display: flex; gap: 3px; margin-bottom: 24px;
+}
+.demo-progress-seg { flex: 1; height: 2px; background: var(--rule-soft); }
+.demo-progress-seg.done { background: var(--accent); }
+.demo-controls { display: flex; justify-content: space-between; gap: 12px; }
+.demo-nav {
+  font-family: var(--sans); font-size: 13px; font-weight: 500;
+  padding: 10px 20px; border-radius: 6px; cursor: pointer;
+  border: 0;
+}
+.demo-nav.primary { background: var(--ink); color: var(--bg); }
+.demo-nav.primary:hover { background: var(--accent); }
+.demo-nav.primary:disabled { opacity: 0.3; cursor: not-allowed; }
+.demo-nav.ghost { background: transparent; color: var(--ink-muted); }
+.demo-nav.ghost:hover { color: var(--ink); }
+
+/* ============ PILLS ============ */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 10px; font-weight: 500;
+  padding: 3px 8px; border-radius: 3px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.pill-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1200px) {
+  .grid-main { grid-template-columns: 1fr; }
+  .kpi-row { grid-template-columns: repeat(2, 1fr); }
+  .findings { grid-template-columns: 1fr; }
+  .sup-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 720px) {
+  .kpi-row { grid-template-columns: 1fr; }
+  .container { padding: 20px; }
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ============ HEADER ============ -->
+<header class="header">
+  <div class="header-inner">
+    <div class="brand">
+      <div class="brand-mark">Tafu</div>
+      <div class="brand-meta">Maternal Referral Loop Closure &nbsp;·&nbsp; <em>Lushoto District, Tanga</em></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab active" data-view="commissioner">Commissioner</button>
+      <button class="tab" data-view="supervisor">Supervisor</button>
+      <button class="tab" data-view="chw">Field Worker</button>
+    </div>
+    <div class="header-right">
+      <button class="demo-btn" onclick="Demo.start()">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        Play guided demo
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ COMMISSIONER VIEW ============ -->
+<div class="view active" id="view-commissioner">
+  <div class="container">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Quarterly <em>portfolio brief</em></h1>
+        <div class="page-subtitle">Q2 2026 &nbsp;·&nbsp; Lushoto District &nbsp;·&nbsp; 3 implementing partners &nbsp;·&nbsp; 127 high-risk referrals tracked</div>
+      </div>
+      <div class="page-filters">
+        <button class="filter-chip"><span class="label">Period</span> Q2 2026</button>
+        <button class="filter-chip"><span class="label">Geography</span> Lushoto District</button>
+        <button class="filter-chip"><span class="label">Partners</span> All (3)</button>
+      </div>
+    </div>
+
+    <!-- AI-generated brief -->
+    <div class="brief">
+      <div class="brief-label">
+        <span class="pulse"></span>
+        Portfolio intelligence · generated 14 minutes ago
+      </div>
+      <div class="brief-body" id="brief-text">
+        Loop closure across the Lushoto portfolio reached <strong>74.0%</strong> this quarter, up from 61% at baseline — but the headline number obscures a sharp split between partners and terrain. <em>Amref's highland catchments (Mlalo, Mtae) close 58% of loops against 84% for Mkombozi Trust in the valley corridor</em>, a gap driven primarily by transport failure during the long rains rather than clinical factors. Three adverse outcomes this quarter all originated as referrals that never arrived at Bumbuli DDH; two had been flagged as high-probability failures by the system but the alerts were not actioned within the 6-hour window. <strong>Recommendation for Q3 allocation:</strong> shift the transport voucher line from partner-agnostic to terrain-weighted, and set a 6-hour escalation SLA on flagged-critical referrals. Both changes are costable from existing budget.
+      </div>
+      <div class="brief-footer">
+        <span>Synthesizes: 127 referrals · 14 facility logs · 3 partner submissions · 9 CHW field notes</span>
+        <span>Auto-regenerates daily or on filter change</span>
+      </div>
+    </div>
+
+    <!-- KPI strip -->
+    <div class="kpi-row">
+      <div class="kpi">
+        <div class="kpi-label">Loop closure rate</div>
+        <div class="kpi-value">74.0<span class="unit">%</span></div>
+        <div class="kpi-delta up"><span class="caret">▲</span> 12.9 pp vs. baseline</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">High-risk referrals (quarter)</div>
+        <div class="kpi-value">127</div>
+        <div class="kpi-delta neutral">94 closed · 30 open · 3 adverse</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Median time-to-arrival</div>
+        <div class="kpi-value">9.4<span class="unit">h</span></div>
+        <div class="kpi-delta up"><span class="caret">▼</span> 3.1h vs. baseline</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Cost per closed loop</div>
+        <div class="kpi-value">$38<span class="unit">.20</span></div>
+        <div class="kpi-delta down"><span class="caret">▲</span> $4.70 vs. Q1</div>
+      </div>
+    </div>
+
+    <!-- Main grid -->
+    <div class="grid-main">
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Where the loops break</div>
+            <div class="panel-sub">Stage-by-stage attrition · Q2 2026</div>
+          </div>
+          <div class="panel-actions">
+            <button class="panel-toggle active">Count</button>
+            <button class="panel-toggle">Rate</button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="funnel" id="funnel"></div>
+          <div class="callout">
+            Without closed-loop tracking, the 33 women whose referrals never resolved would be invisible to this program's M&amp;E system until they surfaced in next year's MMR figures — if they surfaced at all.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Closure trend</div>
+            <div class="panel-sub">12-week rolling · all partners</div>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Partner comparison -->
+    <div class="panel" style="margin-bottom: 24px;">
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">Implementing partner performance</div>
+          <div class="panel-sub">Outcome attribution · not volume attribution</div>
+        </div>
+        <div class="panel-actions">
+          <button class="panel-toggle">Export CSV</button>
+        </div>
+      </div>
+      <div class="panel-body" style="padding: 0;">
+        <table class="ptable">
+          <thead>
+            <tr>
+              <th>Partner</th>
+              <th>Catchment</th>
+              <th class="num">Referrals</th>
+              <th class="num">Closure rate</th>
+              <th class="num">Median arrival</th>
+              <th class="num">Cost / closed loop</th>
+              <th>Leading failure mode</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <div class="partner-name">Mkombozi Trust</div>
+                <div class="partner-sub">Lushoto + Soni corridor</div>
+              </td>
+              <td>Valley, paved</td>
+              <td class="num">42</td>
+              <td class="num"><span class="badge badge-good">84%</span></td>
+              <td class="num">6.1 h</td>
+              <td class="num">$29.40</td>
+              <td><span class="pill">Facility wait &gt;2h</span></td>
+            </tr>
+            <tr>
+              <td>
+                <div class="partner-name">CCBRT</div>
+                <div class="partner-sub">Bumbuli catchment</div>
+              </td>
+              <td>Mixed terrain</td>
+              <td class="num">48</td>
+              <td class="num"><span class="badge badge-warn">76%</span></td>
+              <td class="num">10.2 h</td>
+              <td class="num">$36.80</td>
+              <td><span class="pill">Transport unavailable</span></td>
+            </tr>
+            <tr class="highlight">
+              <td>
+                <div class="partner-name">Amref Health Africa</div>
+                <div class="partner-sub">Mlalo + Mtae highlands</div>
+              </td>
+              <td>Highland, unpaved</td>
+              <td class="num">37</td>
+              <td class="num"><span class="badge badge-bad">58%</span></td>
+              <td class="num">14.8 h</td>
+              <td class="num">$51.70</td>
+              <td><span class="pill">Rain-season road failure</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Findings -->
+    <div class="findings">
+      <div class="finding">
+        <div class="finding-tag">Pattern detected</div>
+        <div class="finding-head">Afternoon referrals fail 3.2× more often than morning referrals</div>
+        <div class="finding-stat">3.2×</div>
+        <div class="finding-body">Referrals initiated after 16:00 close at 41% vs. 83% for pre-noon. Root cause: daladala (minibus) transport effectively stops at dusk on the Mlalo–Lushoto route. Implication for partner protocol design.</div>
+      </div>
+      <div class="finding">
+        <div class="finding-tag">Leading indicator</div>
+        <div class="finding-head">Pre-eclampsia referrals now closing within SLA 84% of the time</div>
+        <div class="finding-stat">+26 pp</div>
+        <div class="finding-body">Up from 58% when program launched. Loop closure rate on this sub-cohort is moving 4–6 weeks ahead of MMR — a usable leading signal for adverse-outcome prediction at the district level.</div>
+      </div>
+      <div class="finding">
+        <div class="finding-tag">CHW retention</div>
+        <div class="finding-head">CHWs receiving closure notifications report 38% lower intent-to-leave</div>
+        <div class="finding-stat">−38%</div>
+        <div class="finding-body">Self-reported in quarterly survey (n=42). Closure visibility appears to operate as a workforce-retention mechanism independent of its clinical value — relevant for sustainability planning.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ SUPERVISOR VIEW ============ -->
+<div class="view" id="view-supervisor">
+  <div class="container">
+
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Open <em>referrals</em></h1>
+        <div class="page-subtitle">Live queue · 27 open · 4 flagged critical · AI re-scores every 15 min</div>
+      </div>
+      <div class="page-filters">
+        <button class="filter-chip"><span class="label">CHW</span> All (12)</button>
+        <button class="filter-chip"><span class="label">Facility</span> All (4)</button>
+        <button class="filter-chip"><span class="label">Sort</span> Failure probability</button>
+      </div>
+    </div>
+
+    <div class="sup-layout">
+
+      <div class="sup-main">
+        <div class="sup-filters">
+          <span class="lbl">Filter</span>
+          <button class="panel-toggle active">All open (27)</button>
+          <button class="panel-toggle">Critical (4)</button>
+          <button class="panel-toggle">Stale &gt;24h (6)</button>
+          <button class="panel-toggle">No arrival signal (11)</button>
+        </div>
+        <div class="case-list" id="caseList"></div>
+      </div>
+
+      <div class="alerts" id="alerts">
+        <!-- injected -->
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ CHW VIEW ============ -->
+<div class="view" id="view-chw">
+  <div class="chw-stage">
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="phone-status">
+          <span>08:42</span>
+          <span style="font-family: var(--mono); font-size: 10px;">TIGO · 3G · 84%</span>
+        </div>
+
+        <div class="phone-header">
+          <div class="chw-greet">Habari, mama</div>
+          <div class="chw-name">Grace Mwanga</div>
+          <div class="chw-location">CHW · Mlalo Ward · Lushoto</div>
+        </div>
+
+        <div class="notif-strip" id="chw-notif">
+          <div class="icon">✓</div>
+          <div class="notif-body">
+            <div class="notif-title">Amina delivered safely</div>
+            C-section at Bumbuli DDH, 04:18 this morning. Mother and baby girl stable. <strong>Loop closed.</strong>
+          </div>
+        </div>
+
+        <div class="chw-section-head">
+          <span>Your active cases</span>
+          <span>24 mothers</span>
+        </div>
+
+        <div class="chw-list" id="chw-list">
+          <!-- injected -->
+        </div>
+
+      </div>
+      <div class="chw-fab">+</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.app -->
+
+<!-- ============ DEMO OVERLAY ============ -->
+<div class="demo-overlay" id="demo-overlay">
+  <div class="demo-modal">
+    <div class="demo-progress" id="demo-progress"></div>
+    <div class="demo-step-label" id="demo-label">Step 1 of 8</div>
+    <h2 class="demo-step-title" id="demo-title"></h2>
+    <div class="demo-step-body" id="demo-body"></div>
+    <div class="demo-controls">
+      <button class="demo-nav ghost" onclick="Demo.exit()">Exit demo</button>
+      <div style="display: flex; gap: 10px;">
+        <button class="demo-nav ghost" id="demo-back" onclick="Demo.prev()">← Back</button>
+        <button class="demo-nav primary" id="demo-next" onclick="Demo.next()">Continue →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA LAYER — synthetic but structured
+// ============================================================
+
+const VILLAGES = ['Mlalo', 'Mtae', 'Mponde', 'Soni', 'Bumbuli', 'Mgwashi', 'Lushoto', 'Mlola'];
+const FACILITIES = {
+  'LDH':  { name: 'Lushoto District Hospital', tier: 'district', town: 'Lushoto' },
+  'BDDH': { name: 'Bumbuli DDH',               tier: 'district', town: 'Bumbuli' },
+  'MHC':  { name: 'Mlalo Health Center',       tier: 'hc',       town: 'Mlalo'   },
+  'BRRH': { name: 'Bombo Regional Referral',   tier: 'regional', town: 'Tanga'   },
+};
+const CHWS = [
+  { id: 'gm', name: 'Grace Mwanga',  ward: 'Mlalo',   partner: 'Amref' },
+  { id: 'nk', name: 'Neema Kibacha', ward: 'Mtae',    partner: 'Amref' },
+  { id: 'um', name: 'Upendo Mshana', ward: 'Soni',    partner: 'Mkombozi' },
+  { id: 'fk', name: 'Fatuma Kilimo', ward: 'Bumbuli', partner: 'CCBRT' },
+  { id: 'rs', name: 'Rehema Shemdoe',ward: 'Mponde',  partner: 'CCBRT' },
+  { id: 'zm', name: 'Zainabu Mbwana',ward: 'Mgwashi', partner: 'Mkombozi' },
+];
+const REASONS = ['Pre-eclampsia', 'Severe anemia', 'Obstructed labor risk', 'Prior C-section', 'Malpresentation', 'Antepartum bleeding'];
+
+const OPEN_CASES = [
+  { id:'R-4127', mother:'Asha Mbaga',      age:27, village:'Mlalo',   facility:'LDH',  reason:'Pre-eclampsia',       elapsedH:38, risk:84, chw:'Grace Mwanga',  signal:'No arrival signal. Husband phone unreachable since 19:20 yesterday.', critical:true },
+  { id:'R-4135', mother:'Saada Mgonja',    age:22, village:'Mtae',    facility:'LDH',  reason:'Severe anemia (Hb 6.2)', elapsedH:52, risk:79, chw:'Neema Kibacha', signal:'SMS delivered, not read. CHW attempted call 2× no answer.', critical:true },
+  { id:'R-4141', mother:'Hadija Kimario',  age:31, village:'Mponde',  facility:'BDDH', reason:'Prior C-section',     elapsedH:26, risk:71, chw:'Rehema Shemdoe',signal:'Transport voucher dispatched 3h ago; no confirmation of use.', critical:true },
+  { id:'R-4148', mother:'Sara Mwangemi',   age:19, village:'Mlalo',   facility:'BDDH', reason:'Pre-eclampsia',       elapsedH:14, risk:62, chw:'Grace Mwanga',  signal:'In transit, daladala-1 delayed by road closure near Lukozi.', critical:false },
+  { id:'R-4152', mother:'Mariam Juma',     age:24, village:'Bumbuli', facility:'BDDH', reason:'Malpresentation',     elapsedH:8,  risk:41, chw:'Fatuma Kilimo', signal:'ANC follow-up scheduled this afternoon; CHW escorting.',          critical:false },
+  { id:'R-4155', mother:'Rukia Amani',     age:28, village:'Soni',    facility:'LDH',  reason:'Antepartum bleeding', elapsedH:4,  risk:34, chw:'Upendo Mshana', signal:'Facility confirmed bed availability. Transport en route.',       critical:false },
+  { id:'R-4158', mother:'Neema Kessy',     age:33, village:'Mgwashi', facility:'BDDH', reason:'Severe anemia',       elapsedH:11, risk:29, chw:'Zainabu Mbwana',signal:'Arrival expected within 2h per CHW estimate.',                    critical:false },
+  { id:'R-4161', mother:'Zuhura Kasim',    age:21, village:'Mtae',    facility:'LDH',  reason:'Pre-eclampsia',       elapsedH:6,  risk:22, chw:'Neema Kibacha', signal:'Private transport confirmed. ETA 10:30.',                         critical:false },
+];
+
+const CHW_CASES = [
+  { name:'Amina Shemweta', gest:'33 wk', status:'closed',   statusLabel:'Delivered', statusClass:'badge-good',    progress:[1,1,1,1,1] },
+  { name:'Sara Mwangemi',  gest:'35 wk', status:'referred', statusLabel:'In transit',statusClass:'badge-warn',    progress:[1,1,0,0,0], currentStep:2 },
+  { name:'Asha Mbaga',     gest:'34 wk', status:'referred', statusLabel:'Open — 38h',statusClass:'badge-bad',     progress:[1,0,0,0,0], currentStep:1 },
+  { name:'Halima Ngoma',   gest:'28 wk', status:'anc',      statusLabel:'ANC follow-up', statusClass:'badge-neutral', progress:[1,0,0,0,0] },
+  { name:'Tatu Kilawe',    gest:'24 wk', status:'anc',      statusLabel:'Routine ANC', statusClass:'badge-neutral', progress:[1,0,0,0,0] },
+];
+
+// ============================================================
+// TAB SWITCHING
+// ============================================================
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    const target = tab.dataset.view;
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${target}`));
+  });
+});
+
+function switchTab(name) {
+  document.querySelector(`.tab[data-view="${name}"]`).click();
+}
+
+// ============================================================
+// COMMISSIONER VIEW — Funnel + trend chart
+// ============================================================
+
+const FUNNEL_STAGES = [
+  { label: 'Referred',        count: 127, pct: 100, drop: 0,  desc: 'CHW logs high-risk referral' },
+  { label: 'In transit',      count: 118, pct: 93,  drop: 9,  desc: 'Patient departed village' },
+  { label: 'Arrived',         count: 101, pct: 80,  drop: 17, desc: 'Registered at receiving facility' },
+  { label: 'Seen within 2h',  count: 94,  pct: 74,  drop: 7,  desc: 'Clinician contact logged' },
+  { label: 'Treated',         count: 94,  pct: 74,  drop: 0,  desc: 'Clinical care delivered' },
+  { label: 'Outcome recorded',count: 94,  pct: 74,  drop: 0,  desc: 'Loop closed back to CHW' },
+];
+
+function renderFunnel() {
+  const host = document.getElementById('funnel');
+  host.innerHTML = FUNNEL_STAGES.map((s, i) => `
+    <div class="funnel-stage">
+      <div class="funnel-label"><span class="idx">${String(i+1).padStart(2,'0')}</span>${s.label}</div>
+      <div class="funnel-bar-wrap">
+        <div class="funnel-bar ${i > 0 && s.drop > 0 ? 'drop' : ''}" style="width: ${s.pct}%;">
+          ${s.pct}%
+        </div>
+      </div>
+      <div class="funnel-count">
+        ${s.count}
+        ${s.drop > 0 ? `<span class="loss">−${s.drop} lost</span>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderTrendChart() {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  const labels = ['W1','W2','W3','W4','W5','W6','W7','W8','W9','W10','W11','W12'];
+  const closure = [61, 63, 62, 65, 68, 67, 70, 72, 71, 73, 74, 74];
+  const baseline = [61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61, 61];
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Closure rate (%)',
+          data: closure,
+          borderColor: '#B04A2F',
+          backgroundColor: 'rgba(176,74,47,0.08)',
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#B04A2F',
+          fill: true,
+        },
+        {
+          label: 'Baseline (pre-Tafu)',
+          data: baseline,
+          borderColor: '#8A8F9C',
+          borderDash: [4, 4],
+          borderWidth: 1.5,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            font: { family: "'IBM Plex Sans', sans-serif", size: 11 },
+            color: '#5A6070',
+            boxWidth: 14, boxHeight: 2, usePointStyle: false,
+          }
+        },
+        tooltip: {
+          backgroundColor: '#1A1F2E',
+          titleFont: { family: "'IBM Plex Mono', monospace", size: 11 },
+          bodyFont: { family: "'IBM Plex Sans', sans-serif", size: 12 },
+          padding: 10,
+          cornerRadius: 4,
+        }
+      },
+      scales: {
+        y: {
+          min: 50, max: 85,
+          grid: { color: '#E8DFCD', drawTicks: false },
+          border: { display: false },
+          ticks: {
+            font: { family: "'IBM Plex Mono', monospace", size: 10 },
+            color: '#8A8F9C',
+            callback: v => v + '%',
+            stepSize: 5,
+          },
+        },
+        x: {
+          grid: { display: false },
+          border: { color: '#D8CFBE' },
+          ticks: {
+            font: { family: "'IBM Plex Mono', monospace", size: 10 },
+            color: '#8A8F9C',
+          },
+        },
+      },
+    },
+  });
+}
+
+// ============================================================
+// SUPERVISOR VIEW — Case list + alerts
+// ============================================================
+
+function riskColor(pct) {
+  if (pct >= 70) return '#923524';
+  if (pct >= 50) return '#A67C20';
+  if (pct >= 30) return '#3A5A7A';
+  return '#4A6B47';
+}
+
+function riskDialSVG(pct) {
+  const r = 22; const c = 2 * Math.PI * r;
+  const offset = c * (1 - pct / 100);
+  return `
+    <svg viewBox="0 0 54 54">
+      <circle cx="27" cy="27" r="${r}" fill="none" stroke="#E8DFCD" stroke-width="3"/>
+      <circle cx="27" cy="27" r="${r}" fill="none" stroke="${riskColor(pct)}" stroke-width="3"
+              stroke-dasharray="${c}" stroke-dashoffset="${offset}"
+              transform="rotate(-90 27 27)" stroke-linecap="round"/>
+    </svg>
+  `;
+}
+
+function renderCases() {
+  const host = document.getElementById('caseList');
+  host.innerHTML = OPEN_CASES.map((c, i) => `
+    <div class="case ${i === 0 ? 'selected' : ''}" onclick="selectCase(${i})">
+      <div class="risk-dial">
+        ${riskDialSVG(c.risk)}
+        <div class="pct" style="color: ${riskColor(c.risk)};">${c.risk}</div>
+      </div>
+      <div>
+        <div class="case-who">${c.mother}, ${c.age} · ${c.village}</div>
+        <div class="case-meta">
+          <span>${c.id}</span><span class="dot">·</span>
+          <span>${c.reason}</span><span class="dot">·</span>
+          <span>→ ${FACILITIES[c.facility].name}</span><span class="dot">·</span>
+          <span>CHW ${c.chw}</span>
+        </div>
+      </div>
+      <div class="case-signal">
+        <span class="primary">${c.critical ? '⚠ No arrival confirmation' : '✓ Signal tracked'}</span>
+        ${c.signal}
+      </div>
+      <div class="case-elapsed">
+        <span class="big">${c.elapsedH}h</span>
+        since referral
+      </div>
+    </div>
+  `).join('');
+}
+
+function selectCase(i) {
+  document.querySelectorAll('.case').forEach((el, idx) => {
+    el.classList.toggle('selected', idx === i);
+  });
+}
+
+function renderAlerts() {
+  const host = document.getElementById('alerts');
+  host.innerHTML = `
+    <div class="alert-card critical">
+      <div class="alert-head">
+        <span class="alert-type">● Critical — 84% failure</span>
+        <span class="alert-time">38h elapsed</span>
+      </div>
+      <div class="alert-body">
+        <strong>Asha Mbaga</strong> (Mlalo → LDH) has no arrival signal. Husband's phone unreachable since last evening. Pre-eclampsia case — clinical window closing.
+      </div>
+      <div class="alert-actions">
+        <button class="action-btn">Dispatch transport voucher</button>
+        <button class="action-btn secondary">Call CHW</button>
+        <button class="action-btn secondary">SMS household contact</button>
+      </div>
+    </div>
+
+    <div class="alert-card critical">
+      <div class="alert-head">
+        <span class="alert-type">● Critical — 79% failure</span>
+        <span class="alert-time">52h elapsed</span>
+      </div>
+      <div class="alert-body">
+        <strong>Saada Mgonja</strong> (Mtae → LDH). SMS delivered, not read. Two unanswered CHW calls. Severe anemia (Hb 6.2).
+      </div>
+      <div class="alert-actions">
+        <button class="action-btn">Escalate to facility outreach</button>
+        <button class="action-btn secondary">Call next of kin</button>
+      </div>
+    </div>
+
+    <div class="alert-card">
+      <div class="alert-head">
+        <span class="alert-type">▲ Pattern — last 72h</span>
+        <span class="alert-time">new</span>
+      </div>
+      <div class="alert-body">
+        4 of 5 Mlalo-originating referrals initiated <strong>after 16:00</strong> have stalled in transit. Consistent with road-closure reports from Lukozi (rainy season). Consider advancing Mlalo CHW cut-off to 14:00 this week.
+      </div>
+      <div class="alert-actions">
+        <button class="action-btn">Draft SOP update</button>
+        <button class="action-btn secondary">View all Mlalo cases</button>
+      </div>
+    </div>
+
+    <div class="alert-card">
+      <div class="alert-head">
+        <span class="alert-type">✓ Loop closed</span>
+        <span class="alert-time">4h ago</span>
+      </div>
+      <div class="alert-body">
+        <strong>Amina Shemweta</strong> (Mlalo → Bumbuli DDH) — safe C-section delivery. Mother &amp; baby stable. Loop closed. CHW Grace notified.
+      </div>
+    </div>
+  `;
+}
+
+// ============================================================
+// CHW VIEW
+// ============================================================
+
+function renderCHW() {
+  const host = document.getElementById('chw-list');
+  host.innerHTML = CHW_CASES.map(c => `
+    <div class="chw-case ${c.status === 'referred' ? 'active' : ''} ${c.status === 'closed' ? 'closed' : ''}">
+      <div class="chw-case-row">
+        <div>
+          <div class="chw-case-name">${c.name}</div>
+          <div class="chw-case-detail">${c.gest} · gravida 1</div>
+        </div>
+        <span class="chw-case-status ${c.statusClass}">${c.statusLabel}</span>
+      </div>
+      <div class="chw-case-progress">
+        ${c.progress.map((p, i) => `
+          <div class="chw-step ${p === 1 ? 'done' : ''} ${c.currentStep === i ? 'current' : ''}"></div>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ============================================================
+// GUIDED DEMO
+// ============================================================
+
+const DEMO_STEPS = [
+  {
+    view: 'chw',
+    label: 'Step 1 of 8 · the origin',
+    title: 'A referral begins in <em>Mlalo village</em>',
+    body: `Grace Mwanga is a Community Health Worker covering the Mlalo ward in the Usambara highlands. This morning, during a routine week-32 ANC visit, she measures <strong>152/98 blood pressure</strong> in 24-year-old Amina Shemweta — a pre-eclampsia flag. Grace initiates a referral to Bumbuli DDH, 22km and one mountain down.<br><br>In the old world, the referral disappears here. Grace may or may not learn what happens next.`,
+    beforeShow: () => { switchTab('chw'); document.getElementById('chw-notif').classList.remove('show'); },
+  },
+  {
+    view: 'supervisor',
+    label: 'Step 2 of 8 · 36 hours later',
+    title: 'The system <em>predicts failure</em> before it happens',
+    body: `36 hours have passed. No arrival signal from Bumbuli DDH. Tafu's model has looked at the inputs — distance, rainy season, late-afternoon initiation, 18km of unpaved highland road, absence of confirmed transport — and put Amina's loop at <strong>84% likely to fail within the clinical window</strong>.<br><br>She is now at the top of supervisor Maria's queue.`,
+    beforeShow: () => switchTab('supervisor'),
+  },
+  {
+    view: 'supervisor',
+    label: 'Step 3 of 8 · suggested action',
+    title: 'Not a dashboard. A <em>next move.</em>',
+    body: `The alert doesn't just say "this case is risky." It surfaces the three most effective interventions for this signal pattern — SMS to household, transport voucher dispatch, CHW call — ordered by historical conversion rate in Amref's catchment.<br><br>Maria SMSes Amina's husband. No response. She calls Grace directly. <strong>The problem: transport money. Heavy rain has made the daladala route to Lushoto impassable.</strong>`,
+  },
+  {
+    view: 'supervisor',
+    label: 'Step 4 of 8 · loop intervention',
+    title: 'Transport voucher dispatched by <em>mobile money</em>',
+    body: `Maria authorizes a 15,000 TSh voucher via M-Pesa to a vetted motorbike operator in Soni who runs the all-weather alternative route. The voucher is tied to Amina's referral ID — it cannot be spent on anything else, and its use is logged as a signal back to the system.<br><br>30 minutes later, the operator confirms pickup.`,
+  },
+  {
+    view: 'supervisor',
+    label: 'Step 5 of 8 · signal arrives',
+    title: 'Day 3. <em>Arrival registered</em> at Bumbuli DDH.',
+    body: `The facility's receiving clerk scans the referral QR code at admission. Amina's status transitions from <strong>in transit</strong> to <strong>arrived</strong>. Clinical time-to-contact begins tracking automatically — the clock that matters most for pre-eclampsia outcomes.<br><br>She is seen within 38 minutes. BP stabilized. Emergency C-section scheduled.`,
+  },
+  {
+    view: 'chw',
+    label: 'Step 6 of 8 · the loop closes',
+    title: 'Grace receives the closure notification',
+    body: `At 04:18 the next morning, Bumbuli DDH logs a safe delivery outcome. The system auto-notifies Grace in Mlalo — SMS plus the app. This is the moment that, in most maternal health programs today, <strong>simply does not happen</strong>.<br><br>Grace now knows. She can follow up with the family. The CHW retention literature suggests this single signal reduces burnout more than any other intervention in her role.`,
+    beforeShow: () => { switchTab('chw'); setTimeout(() => document.getElementById('chw-notif').classList.add('show'), 200); },
+  },
+  {
+    view: 'commissioner',
+    label: 'Step 7 of 8 · zoom out',
+    title: 'One case is a story. <em>Ninety-four</em> is a pattern.',
+    body: `This quarter, 127 high-risk referrals were initiated across the Lushoto portfolio. 94 closed. 30 are still open. 3 had adverse outcomes — and two of those had been flagged as high-failure-probability but the alerts weren't actioned within the 6-hour window.<br><br>That's not a dashboard observation. That's an allocation decision, a protocol change, and an audit finding the commissioner didn't have last quarter.`,
+    beforeShow: () => switchTab('commissioner'),
+  },
+  {
+    view: 'commissioner',
+    label: 'Step 8 of 8 · the commissioner value',
+    title: 'The <em>missing attribution layer</em>',
+    body: `Tafu isn't a replacement for coverage metrics. It's the layer underneath them — the mechanism data that tells commissioners <em>why</em> the population numbers are moving (or not), and which partner or protocol is producing which outcome.<br><br>In a post-USAID funding environment, the question every commissioner is being asked by their board is the same: <strong>"what would you change if you had to spend less and prove more?"</strong><br><br>This is the instrument that lets you answer.`,
+  },
+];
+
+const Demo = {
+  idx: 0,
+  start() {
+    this.idx = 0;
+    document.getElementById('demo-overlay').classList.add('show');
+    this.render();
+  },
+  exit() {
+    document.getElementById('demo-overlay').classList.remove('show');
+  },
+  next() {
+    if (this.idx < DEMO_STEPS.length - 1) { this.idx++; this.render(); }
+    else { this.exit(); }
+  },
+  prev() {
+    if (this.idx > 0) { this.idx--; this.render(); }
+  },
+  render() {
+    const step = DEMO_STEPS[this.idx];
+    document.getElementById('demo-label').textContent = step.label;
+    document.getElementById('demo-title').innerHTML = step.title;
+    document.getElementById('demo-body').innerHTML = step.body;
+    document.getElementById('demo-back').disabled = this.idx === 0;
+    document.getElementById('demo-next').textContent = this.idx === DEMO_STEPS.length - 1 ? 'Finish' : 'Continue →';
+
+    // progress
+    const prog = document.getElementById('demo-progress');
+    prog.innerHTML = DEMO_STEPS.map((_, i) =>
+      `<div class="demo-progress-seg ${i <= this.idx ? 'done' : ''}"></div>`
+    ).join('');
+
+    if (step.beforeShow) step.beforeShow();
+  },
+};
+
+// ============================================================
+// INIT
+// ============================================================
+document.addEventListener('DOMContentLoaded', () => {
+  renderFunnel();
+  renderTrendChart();
+  renderCases();
+  renderAlerts();
+  renderCHW();
+});
+
+// Keyboard nav for demo
+document.addEventListener('keydown', (e) => {
+  if (!document.getElementById('demo-overlay').classList.contains('show')) return;
+  if (e.key === 'ArrowRight' || e.key === 'Enter') Demo.next();
+  if (e.key === 'ArrowLeft') Demo.prev();
+  if (e.key === 'Escape') Demo.exit();
+});
+
+</script>
+</body>
+</html>
