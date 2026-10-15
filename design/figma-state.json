@@ -269,8 +269,9 @@
     "labels": "DM Sans",
     "metadata": "IBM Plex Mono",
     "headingWeights": {
-      "H1-H3": "Bold (700)",
-      "H4-H6": "SemiBold (600)"
+      "H1-H6": "Bold (700)",
+      "subheadings": "Bold (700)",
+      "wordmark": "Bold (700)"
     }
   },
   "wordmark": "TAFU"

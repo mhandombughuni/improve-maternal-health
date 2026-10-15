@@ -18,4 +18,4 @@ The design uses editable text, auto-layout frames, library button/input instance
 
 See [backend and implementation handoff](../docs/backend-and-design-handoff.md).
 
-Heading hierarchy: H1–H3 use DM Sans Bold (700); H4–H6 use DM Sans SemiBold (600). The temporary wordmark is TAFU in uppercase.
+Heading hierarchy: H1–H6 and all subheadings use DM Sans Bold (700). The temporary wordmark is TAFU in uppercase and bold.
