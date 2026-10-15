@@ -8,7 +8,7 @@ Updated 15 October 2026. This decision supersedes the earlier recommendation to 
 | --- | --- |
 | Frontend design | Figma Design, editable layers and component instances, managed through Figma MCP |
 | Application | React + TypeScript + Vite |
-| Visual system | Figma variables mapped to CSS variables; Fraunces, IBM Plex Sans, IBM Plex Mono |
+| Visual system | Figma variables mapped to CSS variables; DM Sans for headings/body; IBM Plex Mono for metadata |
 | Frontend data access | Typed service functions using supabase-js; Zod at forms and external API boundaries |
 | Shared database | Supabase Postgres, SQL migrations and synthetic seed data in Git |
 | Identity and access | Supabase Auth, organization memberships, role-aware row-level security |
@@ -81,7 +81,7 @@ For offline edits, generate a request ID once, store the pending command, and re
 
 [Open the Tafu design file](https://www.figma.com/design/9T8dgasyFx6L9KKVfNMncD?node-id=2-222).
 
-The first pass contains a supervisor queue, referral detail, mobile CHW creation form, facility confirmation, and CHW closure notification. It preserves the concept's fonts and palette, uses fictional facilities and synthetic data, reuses Simple Design System button and field instances with Tafu styling, and includes a reusable referral row.
+The first pass contains a supervisor queue, referral detail, mobile CHW creation form, facility confirmation, and CHW closure notification. It preserves the concept's palette and uses the requested DM Sans heading/body typography, uses fictional facilities and synthetic data, reuses Simple Design System button and field instances with Tafu styling, and includes a reusable referral row.
 
 Navigation links demonstrate the handoff journey. Form entry, filtering, action submission, notification acknowledgment, live data, and offline sync are not implemented by these Figma screens. The facility screen illustrates eventual outcome recording; the backend must separately enforce arrival/contact/outcome sequencing. The program reporting view and a full set of loading/error/empty states remain future design work.
 

@@ -262,5 +262,11 @@
   "mutatedNodeIds": [
     "0:1"
   ],
-  "status": "Editable Figma prototype; navigation only; visual QA passed after layout corrections"
+  "status": "Editable Figma prototype; navigation only; visual QA passed after layout corrections",
+  "typography": {
+    "headings": "DM Sans",
+    "body": "DM Sans",
+    "labels": "DM Sans",
+    "metadata": "IBM Plex Mono"
+  }
 }

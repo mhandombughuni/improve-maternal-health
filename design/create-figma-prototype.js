@@ -2,7 +2,7 @@
 const page = await figma.getNodeByIdAsync('0:1');
 await figma.setCurrentPageAsync(page);
 if (page.children.some(n => n.name === '01 Supervisor queue')) throw new Error('Prototype exists; update by recorded IDs instead of recreating.');
-const families = [{family:'IBM Plex Sans',style:'Regular'},{family:'IBM Plex Sans',style:'Medium'},{family:'IBM Plex Sans',style:'SemiBold'},{family:'IBM Plex Mono',style:'Regular'},{family:'Fraunces',style:'Regular'}];
+const families = [{family:'DM Sans',style:'Regular'},{family:'DM Sans',style:'Medium'},{family:'DM Sans',style:'SemiBold'},{family:'IBM Plex Mono',style:'Regular'},{family:'DM Sans',style:'Regular'}];
 await Promise.all(families.map(f=>figma.loadFontAsync(f)));
 const [buttonSet, fieldSet] = await Promise.all([figma.importComponentSetByKeyAsync('cc8b558dc7d9684011b6b99ce8e6509399bc836b'),figma.importComponentSetByKeyAsync('c28150b04d333d34ed9d2b77abd9f2f54e1a878a')]);
 const libFonts = [...buttonSet.findAllWithCriteria({types:['TEXT']}),...fieldSet.findAllWithCriteria({types:['TEXT']})].flatMap(t=>t.getStyledTextSegments(['fontName']).map(s=>s.fontName));
@@ -20,7 +20,7 @@ for(const n of [0,4,8,12,16,24,32,48]) { const v=figma.variables.createVariable(
 const radius=figma.variables.createVariable('radius/card',collection,'FLOAT'); radius.scopes=['CORNER_RADIUS']; radius.setValueForMode(collection.defaultModeId,8);radius.setVariableCodeSyntax('WEB','var(--radius-card)');
 const paint=k=>figma.variables.setBoundVariableForPaint({type:'SOLID',color:{r:0,g:0,b:0}},'color',vars[k]);
 const styles={};
-for(const [name,family,size,style] of [['body','IBM Plex Sans',15,'Regular'],['label','IBM Plex Sans',13,'Medium'],['heading','Fraunces',36,'Regular'],['subheading','Fraunces',24,'Regular'],['mono','IBM Plex Mono',12,'Regular']]) {const s=figma.createTextStyle();s.name='Tafu/'+name;s.fontName={family,style};s.fontSize=size;s.lineHeight={unit:'PERCENT',value:145};styles[name]=s;}
+for(const [name,family,size,style] of [['body','DM Sans',15,'Regular'],['label','DM Sans',13,'Medium'],['heading','DM Sans',36,'Regular'],['subheading','DM Sans',24,'Regular'],['mono','IBM Plex Mono',12,'Regular']]) {const s=figma.createTextStyle();s.name='Tafu/'+name;s.fontName={family,style};s.fontSize=size;s.lineHeight={unit:'PERCENT',value:145};styles[name]=s;}
 function box(parent,name,width,dir='VERTICAL',fill=null,pad=0,gap=16) {const f=figma.createAutoLayout(dir);f.name=name;parent.appendChild(f);f.resize(width,60);f.counterAxisSizingMode=dir==='HORIZONTAL'?'AUTO':'FIXED';f.primaryAxisSizingMode='AUTO';f.fills=fill?[paint(fill)]:[]; for(const k of ['paddingTop','paddingBottom','paddingLeft','paddingRight'])f.setBoundVariable(k,vars['s'+pad]); f.setBoundVariable('itemSpacing',vars['s'+gap]); return f;}
 function text(parent,value,style='body',color='ink',width=null){const t=figma.createText();parent.appendChild(t);t.name=value.slice(0,45);t.textStyleId=styles[style].id;t.fills=[paint(color)];if(width){t.textAutoResize='HEIGHT';t.resize(width,30);}t.characters=value;if(width)t.textAutoResize='HEIGHT';return t;}
 function card(parent,name,width,fill='surface'){const f=box(parent,name,width,'VERTICAL',fill,24,16);f.setBoundVariable('topLeftRadius',radius);f.setBoundVariable('topRightRadius',radius);f.setBoundVariable('bottomLeftRadius',radius);f.setBoundVariable('bottomRightRadius',radius);f.strokes=[paint('rule')];f.strokeWeight=1;return f;}
