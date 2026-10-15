@@ -267,6 +267,11 @@
     "headings": "DM Sans",
     "body": "DM Sans",
     "labels": "DM Sans",
-    "metadata": "IBM Plex Mono"
-  }
+    "metadata": "IBM Plex Mono",
+    "headingWeights": {
+      "H1-H3": "Bold (700)",
+      "H4-H6": "SemiBold (600)"
+    }
+  },
+  "wordmark": "TAFU"
 }

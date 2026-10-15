@@ -17,3 +17,5 @@ The design uses editable text, auto-layout frames, library button/input instance
 `figma-state.json` records the first creation's node IDs, variable IDs, and link targets. `create-figma-prototype.js` is the initial MCP construction source with layout corrections applied. It deliberately refuses to recreate an existing prototype; subsequent changes should target the recorded IDs. `connect-figma-prototype.js` records navigation wiring. These are Figma Plugin API scripts for MCP execution, not browser application code.
 
 See [backend and implementation handoff](../docs/backend-and-design-handoff.md).
+
+Heading hierarchy: H1–H3 use DM Sans Bold (700); H4–H6 use DM Sans SemiBold (600). The temporary wordmark is TAFU in uppercase.

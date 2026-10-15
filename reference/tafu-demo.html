@@ -8,7 +8,7 @@
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600;1,700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -616,6 +616,10 @@ body::before {
   .container { padding: 20px; }
 }
 
+/* Heading hierarchy shared with the Figma prototype. */
+h1, h2, h3, .h1, .h2, .h3 { font-family: var(--sans); font-weight: 700; }
+h4, h5, h6, .h4, .h5, .h6 { font-family: var(--sans); font-weight: 600; }
+.brand-mark { text-transform: uppercase; }
 </style>
 </head>
 <body>
@@ -625,7 +629,7 @@ body::before {
 <header class="header">
   <div class="header-inner">
     <div class="brand">
-      <div class="brand-mark">Tafu</div>
+      <div class="brand-mark">TAFU</div>
       <div class="brand-meta">Maternal Referral Loop Closure &nbsp;·&nbsp; <em>Lushoto District, Tanga</em></div>
     </div>
     <div class="tabs" role="tablist">
