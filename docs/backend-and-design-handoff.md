@@ -1,6 +1,6 @@
 # Backend and Figma-first implementation
 
-Updated 15 October 2026. This decision supersedes the earlier recommendation to defer shared persistence. This update specifies the backend and creates the Figma prototype; it does not deploy a backend or implement the React application.
+Updated 15 October 2026. This decision supersedes the earlier recommendation to defer shared persistence. The initial design update specified the backend and created the Figma prototype. The subsequent integration implements React, a local persistent Postgres API, and the Supabase adapter; see [current setup](local-and-supabase-setup.md).
 
 ## Complete stack
 
@@ -97,8 +97,12 @@ Implementation steps:
 
 The repository records Figma file/node IDs and design-generation source for traceability. Those files are not a Figma file export or an implemented React frontend. Code Connect mapping can be added after the React components exist; it is not needed to begin the handoff.
 
-## Acceptance and current status
+## Initial design acceptance (historical)
 
 Completed in this update: editable Figma screen creation, eight navigation reactions, visual review with clipping/wrapping fixes, font-family checks, and design/backend documentation. Inspection found text/frame/instance nodes and no whole-screen raster fills across all five screens.
 
 Pending: React implementation, Supabase project provisioning, schema and policy implementation, provider integration, running application tests, and deployment. No backend credentials or paid infrastructure were created.
+
+## Working integration update
+
+A runnable local frontend/API now uses the shared SQL migration and access policies, with a Supabase client adapter ready for a provisioned project. The user-edited Figma hierarchy is preserved. Hosted credentials are not configured. Offline cache/outbox and the broader proposed analytics remain deferred. See [setup and verification boundaries](local-and-supabase-setup.md).

@@ -19,3 +19,5 @@ The design uses editable text, auto-layout frames, library button/input instance
 See [backend and implementation handoff](../docs/backend-and-design-handoff.md).
 
 Heading hierarchy: H1–H6 and all subheadings use DM Sans Bold (700). The temporary wordmark is TAFU in uppercase and bold.
+
+Implementation note: the user subsequently tightened typography manually in Figma. The React application was built from those current nodes, including 600-weight record/timeline labels. Figma is authoritative; the construction scripts describe earlier revisions and must not overwrite the manual edits.

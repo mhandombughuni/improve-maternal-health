@@ -1,6 +1,6 @@
 # Tafu: concept assessment and prototype architecture
 
-Prepared 15 October 2026. This is an analysis and implementation proposal; no functional application has been built in this update.
+Prepared 15 October 2026 as the initial analysis. A subsequent working integration is now implemented; see [current setup and scope](local-and-supabase-setup.md). The proposal below records the original assessment.
 
 ## Product recommendation
 
